@@ -1,0 +1,11 @@
+Notes to myself:
+
+Attempts were made to cythonize various forms of the Hamiltonian, but ready to abandon for now. However:
+
+Currently kuprov_cython.ipynb is the focus of interest. Non-fancy Kuprov code was surprisingly fast. Ways to vectorize
+the loops with numpy were found as will, but the initial tests indicated they were slower than Kuprov.
+
+TODO: compare Kuprov to my old code
+TODO: compare Kuprov to my vectorized code
+TODO: compare Kuprov to my "pre-saved partial solution" code
+TODO: dial in on a fastest solution based on these speed test results
