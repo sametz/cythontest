@@ -3,7 +3,10 @@
 import numpy as np
 from scipy.sparse import csr_matrix, kron, lil_matrix
 
+from speedtest.speedutils import timefn
 
+
+@timefn
 def kuprov_H_csr(v, J):
 
     sigma_x = csr_matrix([[0, 1 / 2], [1 / 2, 0]])
@@ -47,6 +50,7 @@ def kuprov_H_csr(v, J):
     return H.todense()
 
 
+@timefn
 def kuprov_H_lil(v, J):
     sigma_x = lil_matrix([[0, 1 / 2], [1 / 2, 0]])
     sigma_y = lil_matrix([[0, -1j / 2], [1j / 2, 0]])
@@ -89,6 +93,7 @@ def kuprov_H_lil(v, J):
     return H.todense()
 
 
+@timefn
 def kuprov_H_dense(v, J):
     sigma_x = np.matrix([[0, 1 / 2], [1 / 2, 0]])
     sigma_y = np.matrix([[0, -1j / 2], [1j / 2, 0]])
@@ -135,14 +140,17 @@ def kuprov_H_dense(v, J):
 if __name__ == '__main__':
     from simulation_data import spin8
 
-    v = [430, 265, 300]
-    J = csr_matrix((3, 3))
-    J[0, 1] = 7
-    J[0, 2] = 15
-    J[1, 2] = 1.5
-    J = J + J.T
+    # v = [430, 265, 300]
+    # J = csr_matrix((3, 3))
+    # J[0, 1] = 7
+    # J[0, 2] = 15
+    # J[1, 2] = 1.5
+    # J = J + J.T
 
-    H = kuprov_H_dense(v, J)
-    print(H)
+    # H = kuprov_H_dense(v, J)
+    # print(H)
     # H = kuprov_H_lil(*spin8())
     # print(H)
+    v, J = spin8()
+    for H in [kuprov_H_csr, kuprov_H_lil, kuprov_H_dense]:
+        print(H(v, J))

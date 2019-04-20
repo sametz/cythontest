@@ -1,6 +1,8 @@
 import numpy as np
+
+from speedtest.speedutils import timefn  # Decorator for timing functions
 # The best Kuprov algorithm so far
-from kuprov import kuprov_H_dense as kuprov
+from speedtest.kuprov import kuprov_H_dense as kuprov_H
 
 # My original slower Hamilton
 from nmrtools.nmrmath import hamiltonian_slow
@@ -46,6 +48,8 @@ def spin_operators(nspins):
 # First: an unvectorized Hamiltonian using spin_operators
 
 
+
+@timefn
 def hamiltonian_unvectorized(v, J, L):
     nspins = len(v)
     Lx = L[0]
@@ -62,6 +66,8 @@ def hamiltonian_unvectorized(v, J, L):
 
 
 # Then: vectorized
+
+@timefn
 def hamiltonian_vectorized(v, J, L):
     nspins = len(v)
     H = np.tensordot(v, L[2], axes=1)
@@ -76,7 +82,7 @@ if __name__ == '__main__':
     from simulation_data import spin8
     v, J = spin8()
     L = spin_operators(8)
-    hamiltonians = [kuprov(v, J), hamiltonian_slow(v, J), hamiltonian(v, J), hamiltonian_unvectorized(v, J, L),
+    hamiltonians = [kuprov_H(v, J), hamiltonian_slow(v, J), hamiltonian(v, J), hamiltonian_unvectorized(v, J, L),
                     hamiltonian_vectorized(v, J, L)]
     for i in range(len(hamiltonians)-1):
         assert np.array_equal(hamiltonians[i], hamiltonians[i+1])
