@@ -3,7 +3,7 @@
 import numpy as np
 from scipy.sparse import csr_matrix, kron, lil_matrix
 
-from speedtest.speedutils import timefn
+from .speedutils import timefn
 
 
 @timefn
