@@ -80,6 +80,7 @@ def hamiltonian_vectorized(v, J, L):
 
 if __name__ == '__main__':
     from simulation_data import spin8
+    from tests.prepare import standard_H
     v, J = spin8()
     L = spin_operators(8)
     hamiltonians = [kuprov_H(v, J), hamiltonian_slow(v, J), hamiltonian(v, J), hamiltonian_unvectorized(v, J, L),
@@ -90,5 +91,5 @@ if __name__ == '__main__':
             print('Passed: ', str(i), str(i+1))
         except AssertionError:
             print('failure at ', str(i))
-        print(hamiltonians[i])
-        print(hamiltonians[i + 1])
+            print(hamiltonians[i])
+            print(hamiltonians[i + 1])
