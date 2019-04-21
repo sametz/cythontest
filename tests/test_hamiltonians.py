@@ -1,4 +1,5 @@
 import os
+from timeit import timeit
 
 import numpy as np
 import pytest
@@ -103,6 +104,54 @@ def test_hamiltonian_vectorized():
     test_H = hamiltonian_vectorized(v, J, L)
     assert np.array_equal(test_H, standard_H)
 
+
+@timefn
+def kuprov_loop(v, J, n):
+    for i in range(n):
+        _ = kuprov_H(v, J)
+    return _
+
+
+@timefn
+def slow_loop(v, J, n):
+    for i in range(n):
+        _ = hamiltonian_slow(v, J)
+    return _
+
+
+@timefn
+def hamiltonian_loop(v, J, n):
+    for i in range(n):
+        _ = hamiltonian(v, J)
+        cleanup()
+    return _
+
+
+@timefn
+def unvectorized_loop(v, J, n):
+    for i in range(n):
+        L = spin_operators(len(v))
+        _ = hamiltonian_unvectorized(v, J, L)
+    return _
+
+
+@timefn
+def vectorized_loop(v, J, n):
+    for i in range(n):
+        L = spin_operators(len(v))
+        _ = hamiltonian_unvectorized(v, J, L)
+    return _
+
+
+def test_all():
+    n = 3
+    v, J = spin8()
+    kuprov_loop(v, J, n)
+    slow_loop(v, J, n)
+    hamiltonian_loop(v, J, n)
+    unvectorized_loop(v, J, n)
+    vectorized_loop(v, J, n)
+    assert True
 
 
 # if __name__ == '__main__':

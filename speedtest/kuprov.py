@@ -6,7 +6,7 @@ from scipy.sparse import csr_matrix, kron, lil_matrix
 from .speedutils import timefn
 
 
-@timefn
+# @timefn
 def kuprov_H_csr(v, J):
 
     sigma_x = csr_matrix([[0, 1 / 2], [1 / 2, 0]])
@@ -50,7 +50,7 @@ def kuprov_H_csr(v, J):
     return H.todense()
 
 
-@timefn
+# @timefn
 def kuprov_H_lil(v, J):
     sigma_x = lil_matrix([[0, 1 / 2], [1 / 2, 0]])
     sigma_y = lil_matrix([[0, -1j / 2], [1j / 2, 0]])
@@ -93,12 +93,13 @@ def kuprov_H_lil(v, J):
     return H.todense()
 
 
-@timefn
+# @timefn
 def kuprov_H_dense(v, J):
-    sigma_x = np.matrix([[0, 1 / 2], [1 / 2, 0]])
-    sigma_y = np.matrix([[0, -1j / 2], [1j / 2, 0]])
-    sigma_z = np.matrix([[1 / 2, 0], [0, -1 / 2]])
-    unit = np.matrix([[1, 0], [0, 1]])
+    # 2019-04-21: removed deprecated np.matrix; replaced with np.array
+    sigma_x = np.array([[0, 1 / 2], [1 / 2, 0]])
+    sigma_y = np.array([[0, -1j / 2], [1j / 2, 0]])
+    sigma_z = np.array([[1 / 2, 0], [0, -1 / 2]])
+    unit = np.array([[1, 0], [0, 1]])
 
     nspins = len(v)
     Lx = []
@@ -131,7 +132,7 @@ def kuprov_H_dense(v, J):
     for n in range(nspins):
         for k in range(nspins):
             if n != k:
-                H += 0.5 * J[n, k] * (Lx[n]*Lx[k] + Ly[n]*Ly[k] + Lz[n]*Lz[k])
+                H += 0.5 * J[n, k] * (Lx[n]@Lx[k] + Ly[n]@Ly[k] + Lz[n]@Lz[k])
 
     return H
 

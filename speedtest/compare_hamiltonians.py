@@ -49,7 +49,7 @@ def spin_operators(nspins):
 
 
 
-@timefn
+# @timefn
 def hamiltonian_unvectorized(v, J, L):
     nspins = len(v)
     Lx = L[0]
@@ -67,7 +67,7 @@ def hamiltonian_unvectorized(v, J, L):
 
 # Then: vectorized
 
-@timefn
+# @timefn
 def hamiltonian_vectorized(v, J, L):
     nspins = len(v)
     H = np.tensordot(v, L[2], axes=1)
@@ -85,4 +85,10 @@ if __name__ == '__main__':
     hamiltonians = [kuprov_H(v, J), hamiltonian_slow(v, J), hamiltonian(v, J), hamiltonian_unvectorized(v, J, L),
                     hamiltonian_vectorized(v, J, L)]
     for i in range(len(hamiltonians)-1):
-        assert np.array_equal(hamiltonians[i], hamiltonians[i+1])
+        try:
+            assert np.array_equal(hamiltonians[i], hamiltonians[i+1]), 'fail at ' + str(i)
+            print('Passed: ', str(i), str(i+1))
+        except AssertionError:
+            print('failure at ', str(i))
+        print(hamiltonians[i])
+        print(hamiltonians[i + 1])
