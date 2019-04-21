@@ -1,7 +1,7 @@
 """Hacking in references for testing"""
 import numpy as np
 
-from simulation_data import spin8
+from simulation_data import spin8, spin3
 
 
 def hamiltonian_original(freqlist, couplings):
@@ -73,5 +73,5 @@ def hamiltonian_original(freqlist, couplings):
     return H
 
 
-v, J = spin8()
-standard_H = hamiltonian_original(v, J)
+standard_3 = hamiltonian_original(*spin3())
+standard_8 = hamiltonian_original(*spin8())

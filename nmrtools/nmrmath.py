@@ -143,23 +143,23 @@ def hamiltonian_slow(freqlist, couplings):
 
     # The following empty arrays will be used to store the
     # Cartesian spin operators.
-    Lx = np.empty((1, nspins), dtype='object')
-    Ly = np.empty((1, nspins), dtype='object')
-    Lz = np.empty((1, nspins), dtype='object')
+    Lx = np.empty((nspins), dtype='object')
+    Ly = np.empty((nspins), dtype='object')
+    Lz = np.empty((nspins), dtype='object')
 
     for n in range(nspins):
-        Lx[0, n] = 1
-        Ly[0, n] = 1
-        Lz[0, n] = 1
+        Lx[n] = 1
+        Ly[n] = 1
+        Lz[n] = 1
         for k in range(nspins):
             if k == n:  # Diagonal element
-                Lx[0, n] = np.kron(Lx[0, n], sigma_x)
-                Ly[0, n] = np.kron(Ly[0, n], sigma_y)
-                Lz[0, n] = np.kron(Lz[0, n], sigma_z)
+                Lx[n] = np.kron(Lx[n], sigma_x)
+                Ly[n] = np.kron(Ly[n], sigma_y)
+                Lz[n] = np.kron(Lz[n], sigma_z)
             else:  # Off-diagonal element
-                Lx[0, n] = np.kron(Lx[0, n], unit)
-                Ly[0, n] = np.kron(Ly[0, n], unit)
-                Lz[0, n] = np.kron(Lz[0, n], unit)
+                Lx[n] = np.kron(Lx[n], unit)
+                Ly[n] = np.kron(Ly[n], unit)
+                Lz[n] = np.kron(Lz[n], unit)
 
     Lcol = np.vstack((Lx, Ly, Lz)).real
     Lrow = Lcol.T  # As opposed to sparse version of code, this works!
@@ -170,7 +170,7 @@ def hamiltonian_slow(freqlist, couplings):
 
     # Add Zeeman interactions:
     for n in range(nspins):
-        H = H + freqlist[n] * Lz[0, n]
+        H = H + freqlist[n] * Lz[n]
 
     # Scalar couplings
 
@@ -527,9 +527,7 @@ def sparse_operators(nspins):
     #     print('Lrow: ', Lrow.shape)
     #     print(Lrow)
     Lproduct = np.dot(Lrow, Lcol)
-    #     print('Lproduct: ', Lproduct)
-    # print(type(Lproduct), Lproduct.shape)
-    # print(type(Lproduct[0, 0]), Lproduct[0, 0].shape)
+
     Lz_sparse = [csr_matrix(z) for z in Lz]
 
     for i in range(nspins):

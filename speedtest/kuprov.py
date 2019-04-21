@@ -2,7 +2,7 @@
 
 import numpy as np
 from scipy.sparse import csr_matrix, kron, lil_matrix
-
+# from speedtest.speedutils import timefn
 
 # @timefn
 def kuprov_H_csr(v, J):

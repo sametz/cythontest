@@ -1,5 +1,8 @@
 from functools import wraps
+import logging
 import time
+
+logging.basicConfig(level=logging.INFO, format=' %(asctime)s - %(levelname)s %(message)s')
 
 
 def timefn(fn):
@@ -13,7 +16,7 @@ def timefn(fn):
         t1 = time.time()
         result = fn(*args, **kwargs)
         t2 = time.time()
-        print((
-            "@timefn:" + fn.__name__ + " took " + str(t2 - t1) + " seconds"))
+        print("@timefn:" + fn.__name__ + " took " + str(t2 - t1) + " seconds")
+        logging.info('@timefn:' + fn.__name__ + ' took ' + str(t2 - t1) + ' seconds')
         return result
     return measure_time

@@ -1,6 +1,16 @@
 import numpy as np
 
 
+def spin3():
+    v = np.array([115, 140, 190])
+    J = np.zeros((3, 3))
+    J[0, 1] = 6
+    J[0, 2] = 12
+    J[1, 2] = 3
+    J = J + J.T
+    return v, J
+
+
 def spin8():
     v = np.array([85, 120, 160, 185, 205, 215, 235, 260])
     # Note: previous version used a scipy lil_matrix for J, but hamiltonian
@@ -43,7 +53,7 @@ def fox():
 
     A stress test for a 12-nuclei simulation.
     """
-    v = np.array [1.63, 1.63, 2.2, 2.2, 2.5, 2.5, 2.5, 2.5, 5.71, 5.77] * 400
+    v = np.array[1.63, 1.63, 2.2, 2.2, 2.5, 2.5, 2.5, 2.5, 5.71, 5.77] * 400
     J = np.zeros((12, 12))
     J[0, 1] = -12
     J[0, 2] = 6
