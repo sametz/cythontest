@@ -144,13 +144,13 @@ def vectorized_loop(v, J, n):
 
 
 def test_all():
-    n = 3
+    n = 30
     v, J = spin8()
     kuprov_loop(v, J, n)
     slow_loop(v, J, n)
-    hamiltonian_loop(v, J, n)
-    unvectorized_loop(v, J, n)
-    vectorized_loop(v, J, n)
+    # hamiltonian_loop(v, J, n)
+    # unvectorized_loop(v, J, n)
+    # vectorized_loop(v, J, n)
     assert True
 
 

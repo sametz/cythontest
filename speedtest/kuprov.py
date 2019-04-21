@@ -3,8 +3,6 @@
 import numpy as np
 from scipy.sparse import csr_matrix, kron, lil_matrix
 
-from .speedutils import timefn
-
 
 # @timefn
 def kuprov_H_csr(v, J):
@@ -140,18 +138,15 @@ def kuprov_H_dense(v, J):
 
 if __name__ == '__main__':
     from simulation_data import spin8
-
-    # v = [430, 265, 300]
-    # J = csr_matrix((3, 3))
-    # J[0, 1] = 7
-    # J[0, 2] = 15
-    # J[1, 2] = 1.5
-    # J = J + J.T
-
-    # H = kuprov_H_dense(v, J)
-    # print(H)
-    # H = kuprov_H_lil(*spin8())
-    # print(H)
+    from tests.prepare import standard_H
     v, J = spin8()
-    for H in [kuprov_H_csr, kuprov_H_lil, kuprov_H_dense]:
-        print(H(v, J))
+    hamiltonians = [f(v, J) for f in [kuprov_H_csr, kuprov_H_lil, kuprov_H_dense]]
+    for i, h in enumerate(hamiltonians):
+        try:
+            assert np.array_equal(h, standard_H), 'fail at ' + str(i)
+            print('Passed: ', str(i), str(i+1))
+        except AssertionError:
+            print('failure at ', str(i))
+            print(hamiltonians[i])
+    print(standard_H)
+    print(hamiltonians[-1])
