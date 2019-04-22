@@ -5,14 +5,14 @@ import numpy as np
 import pytest
 import send2trash
 
-from simulation_data import spin8, spin3
+from simulation_data import spin8, spin3, fox
 from speedtest.speedutils import timefn  # Decorator for timing functions
 from speedtest.compare_hamiltonians import (kuprov_H, hamiltonian_slow, hamiltonian, spin_operators,
                                             hamiltonian_unvectorized, hamiltonian_vectorized)
-from .prepare import standard_3, standard_8
+from .prepare import standard_3, standard_8, standard_fox
 
-SPIN_SYSTEM = spin8
-STANDARD_H = standard_8
+SPIN_SYSTEM = fox
+STANDARD_H = standard_fox
 
 
 def cleanup():

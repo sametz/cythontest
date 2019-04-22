@@ -1,7 +1,8 @@
 """Hacking in references for testing"""
 import numpy as np
 
-from simulation_data import spin8, spin3
+from nmrtools.nmrmath import hamiltonian
+from simulation_data import spin8, spin3, fox
 
 
 def hamiltonian_original(freqlist, couplings):
@@ -75,3 +76,4 @@ def hamiltonian_original(freqlist, couplings):
 
 standard_3 = hamiltonian_original(*spin3())
 standard_8 = hamiltonian_original(*spin8())
+standard_fox = hamiltonian(*fox())
