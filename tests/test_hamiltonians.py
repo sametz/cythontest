@@ -1,5 +1,5 @@
 import os
-from timeit import timeit
+# from timeit import timeit
 
 import numpy as np
 import pytest
@@ -7,12 +7,12 @@ import send2trash
 
 from simulation_data import spin8, spin3, fox
 from speedtest.speedutils import timefn  # Decorator for timing functions
-from speedtest.compare_hamiltonians import (kuprov_H, hamiltonian_slow, hamiltonian, spin_operators,
+from speedtest.compare_hamiltonians import (kuprov_H, kuprov_cached, hamiltonian_slow, hamiltonian, spin_operators_unvectorized,
                                             hamiltonian_unvectorized, hamiltonian_vectorized)
-from .prepare import standard_3, standard_8, standard_fox
+from .prepare import standard_3, standard_8  #standard_fox
 
-SPIN_SYSTEM = fox
-STANDARD_H = standard_fox
+SPIN_SYSTEM = spin8
+STANDARD_H = standard_8
 
 
 def cleanup():
@@ -88,7 +88,7 @@ def test_hamiltonian_slow():
     assert np.array_equal(test_H, STANDARD_H)
 
 
-def test_hamiltonian(cleanup_fixture):
+def test_hamiltonian():
     v, J = SPIN_SYSTEM()
     test_H = hamiltonian(v, J)
     assert np.array_equal(test_H, STANDARD_H)
@@ -96,7 +96,7 @@ def test_hamiltonian(cleanup_fixture):
 
 def test_hamiltonian_unvectorized():
     v, J = SPIN_SYSTEM()
-    L = spin_operators(len(v))
+    L = spin_operators_unvectorized(len(v))
     test_H = hamiltonian_unvectorized(v, J, L)
     assert np.array_equal(test_H, STANDARD_H)
 
@@ -116,6 +116,13 @@ def kuprov_loop(v, J, n):
 
 
 @timefn
+def kuprov_so_loop(v, J, n):
+    for i in range(n):
+        _ = kuprov_H(v, J)
+    return _
+
+
+@timefn
 def slow_loop(v, J, n):
     for i in range(n):
         _ = hamiltonian_slow(v, J)
@@ -126,33 +133,34 @@ def slow_loop(v, J, n):
 def hamiltonian_loop(v, J, n):
     for i in range(n):
         _ = hamiltonian(v, J)
-        cleanup()
+        # cleanup()
     return _
 
 
 @timefn
 def unvectorized_loop(v, J, n):
     for i in range(n):
-        L = spin_operators(len(v))
-        _ = hamiltonian_unvectorized(v, J, L)
+        # L = spin_operators(len(v))
+        _ = hamiltonian_unvectorized(v, J)
     return _
 
 
 @timefn
 def vectorized_loop(v, J, n):
     for i in range(n):
-        L = spin_operators(len(v))
-        _ = hamiltonian_vectorized(v, J, L)
+        # L = spin_operators(len(v))
+        _ = hamiltonian_vectorized(v, J)
     return _
 
 
 def test_all():
     n = 30
     v, J = SPIN_SYSTEM()
-    kuprov_loop(v, J, n)
-    slow_loop(v, J, n)
-    # hamiltonian_loop(v, J, n)
-    unvectorized_loop(v, J, n)
+    # kuprov_loop(v, J, n)
+    # kuprov_so_loop(v, J, n)
+    # slow_loop(v, J, n)
+    hamiltonian_loop(v, J, n),
+    # unvectorized_loop(v, J, n)
     vectorized_loop(v, J, n)
     assert True
 

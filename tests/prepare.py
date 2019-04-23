@@ -76,4 +76,4 @@ def hamiltonian_original(freqlist, couplings):
 
 standard_3 = hamiltonian_original(*spin3())
 standard_8 = hamiltonian_original(*spin8())
-standard_fox = hamiltonian(*fox())
+# standard_fox = hamiltonian(*fox())
