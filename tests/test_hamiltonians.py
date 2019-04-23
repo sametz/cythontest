@@ -154,7 +154,7 @@ def vectorized_loop(v, J, n):
 
 
 def test_all():
-    n = 30
+    n = 300
     v, J = SPIN_SYSTEM()
     # kuprov_loop(v, J, n)
     # kuprov_so_loop(v, J, n)

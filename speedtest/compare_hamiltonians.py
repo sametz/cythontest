@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.sparse import csr_matrix
 
 from speedtest.speedutils import timefn  # Decorator for timing functions
 # The best Kuprov algorithm so far
@@ -109,10 +110,15 @@ def spin_operators_vectorized(nspins):
         L[0][n] = Lx_current
         L[1][n] = Ly_current
         L[2][n] = Lz_current
-        L_T = L.transpose(1, 0, 2, 3)
-        Lproduct = np.tensordot(L_T, L, axes=((1, 3), (0, 2))).swapaxes(1, 2)
+    L_T = L.transpose(1, 0, 2, 3)
+    Lproduct = np.tensordot(L_T, L, axes=((1, 3), (0, 2))).swapaxes(1, 2)
+    Lz = [csr_matrix(z) for z in L[2]]
+    # for i in range(nspins):
+    #     for j in range(nspins):
+    #         Lproduct[i, j] = csr_matrix(Lproduct[i, j])
+    # Lproduct_sparse = csr_matrix(Lproduct)
     with open(filename_Lz, 'wb') as f:
-        np.save(f, L[2])
+        np.save(f, Lz)
     with open(filename_Lproduct, 'wb') as f:
         np.save(f, Lproduct)
 
