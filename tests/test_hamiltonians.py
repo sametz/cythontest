@@ -7,8 +7,11 @@ import send2trash
 
 from simulation_data import spin8, spin3, fox
 from speedtest.speedutils import timefn  # Decorator for timing functions
-from speedtest.compare_hamiltonians import (kuprov_H, kuprov_cached, hamiltonian_slow, hamiltonian, spin_operators_unvectorized,
-                                            hamiltonian_unvectorized, hamiltonian_vectorized)
+from speedtest.compare_hamiltonians import (kuprov_H, kuprov_cached, hamiltonian_slow, hamiltonian,
+                                            spin_operators_unvectorized,
+                                            hamiltonian_unvectorized, hamiltonian_vectorized,
+                                            hamiltonian_sparse)
+from nmrtools.nmrmath import simsignals
 from .prepare import standard_3, standard_8  #standard_fox
 
 SPIN_SYSTEM = spin8
@@ -116,9 +119,9 @@ def kuprov_loop(v, J, n):
 
 
 @timefn
-def kuprov_so_loop(v, J, n):
+def kuprov_cached_loop(v, J, n):
     for i in range(n):
-        _ = kuprov_H(v, J)
+        _ = kuprov_cached(v, J)
     return _
 
 
@@ -153,17 +156,55 @@ def vectorized_loop(v, J, n):
     return _
 
 
+@timefn
+def sparse_loop(v, J, n):
+    for i in range(n):
+        # L = spin_operators(len(v))
+        _ = hamiltonian_sparse(v, J)
+    return _
+
+
 def test_all():
-    n = 300
+    n = 1
     v, J = SPIN_SYSTEM()
     # kuprov_loop(v, J, n)
-    # kuprov_so_loop(v, J, n)
+    # kuprov_cached_loop(v, J, n)
     # slow_loop(v, J, n)
-    hamiltonian_loop(v, J, n),
+    hamiltonian_loop(v, J, n)
     # unvectorized_loop(v, J, n)
     vectorized_loop(v, J, n)
+    sparse_loop(v, J, n)
     assert True
 
+
+def test_all_equal():
+    v, J = SPIN_SYSTEM()
+    h_funcs = [kuprov_cached, hamiltonian, hamiltonian_vectorized, hamiltonian_sparse]
+    hamiltonians = [f(v, J) for f in h_funcs]
+    for i in range(len(hamiltonians) - 1):
+        try:
+            assert np.array_equal(hamiltonians[i], hamiltonians[i + 1]), 'fail at ' + str(i)
+            print('Passed: ', str(i), str(i + 1))
+        except AssertionError:
+            print('failure at ', str(i))
+            print(hamiltonians[i])
+            print(hamiltonians[i + 1])
+
+
+def test_all_eigen():
+    v, J = SPIN_SYSTEM()
+    nspins = len(v)
+    h_funcs = [kuprov_cached, hamiltonian, hamiltonian_vectorized, hamiltonian_sparse]
+    hamiltonians = [f(v, J) for f in h_funcs]
+    spectra = [simsignals(h, nspins) for h in hamiltonians]
+    for i in range(len(spectra) - 1):
+        try:
+            np.testing.assert_allclose(spectra[i], spectra[i + 1]), 'fail at ' + str(i)
+            print('Passed: ', str(i), str(i + 1))
+        except AssertionError:
+            print('failure at ', str(i))
+        print(spectra[i])
+        print(spectra[i + 1])
 
 # if __name__ == '__main__':
 #     from simulation_data import spin8

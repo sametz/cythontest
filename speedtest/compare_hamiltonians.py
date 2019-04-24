@@ -1,5 +1,7 @@
+import pickle
 import numpy as np
 from scipy.sparse import csr_matrix
+import sparse
 
 from speedtest.speedutils import timefn  # Decorator for timing functions
 # The best Kuprov algorithm so far
@@ -118,7 +120,7 @@ def spin_operators_vectorized(nspins):
     #         Lproduct[i, j] = csr_matrix(Lproduct[i, j])
     # Lproduct_sparse = csr_matrix(Lproduct)
     with open(filename_Lz, 'wb') as f:
-        np.save(f, Lz)
+        np.save(f, L[2])
     with open(filename_Lproduct, 'wb') as f:
         np.save(f, Lproduct)
 
@@ -137,6 +139,63 @@ def hamiltonian_vectorized(v, J):
     return H
 
 
+def so_sparse(nspins):
+    filename_Lz = f'sparse_Lz{nspins}.npz'
+    filename_Lproduct = f'sparse_Lproduct{nspins}.npz'
+    try:
+        Lz = sparse.load_npz(filename_Lz)
+        Lproduct = sparse.load_npz(filename_Lproduct)
+        return Lz, Lproduct
+    except FileNotFoundError:
+        print(f'creating vectorized{nspins}.npy')
+    sigma_x = np.array([[0, 1 / 2], [1 / 2, 0]])
+    sigma_y = np.array([[0, -1j / 2], [1j / 2, 0]])
+    sigma_z = np.array([[1 / 2, 0], [0, -1 / 2]])
+    unit = np.array([[1, 0], [0, 1]])
+
+    L = np.empty((3, nspins, 2 ** nspins, 2 ** nspins), dtype=np.complex128)  # consider other dtype?
+    for n in range(nspins):
+        Lx_current = 1
+        Ly_current = 1
+        Lz_current = 1
+
+        for k in range(nspins):
+            if k == n:
+                Lx_current = np.kron(Lx_current, sigma_x)
+                Ly_current = np.kron(Ly_current, sigma_y)
+                Lz_current = np.kron(Lz_current, sigma_z)
+            else:
+                Lx_current = np.kron(Lx_current, unit)
+                Ly_current = np.kron(Ly_current, unit)
+                Lz_current = np.kron(Lz_current, unit)
+
+        L[0][n] = Lx_current
+        L[1][n] = Ly_current
+        L[2][n] = Lz_current
+    L_T = L.transpose(1, 0, 2, 3)
+    Lproduct = np.tensordot(L_T, L, axes=((1, 3), (0, 2))).swapaxes(1, 2)
+    Lz_sparse = sparse.COO(L[2])
+    # for i in range(nspins):
+    #     for j in range(nspins):
+    #         Lproduct[i, j] = csr_matrix(Lproduct[i, j])
+    Lproduct_sparse = sparse.COO(Lproduct)
+    sparse.save_npz(filename_Lz, Lz_sparse)
+    sparse.save_npz(filename_Lproduct, Lproduct_sparse)
+
+    return Lz_sparse, Lproduct_sparse
+
+
+def hamiltonian_sparse(v, J):
+    nspins = len(v)
+    Lz, Lproduct = so_sparse(nspins)
+    H = sparse.tensordot(v, Lz, axes=1)
+    # L_T = L.transpose(1, 0, 2, 3)
+    # Lproduct = np.tensordot(L_T, L, axes=((1, 3), (0, 2))).swapaxes(1, 2)
+    scalars = 0.5 * J
+    H += sparse.tensordot(scalars, Lproduct, axes=2)
+    return H
+
+
 if __name__ == '__main__':
     from simulation_data import spin8
     # from tests.prepare import standard_H
@@ -148,7 +207,8 @@ if __name__ == '__main__':
                     # hamiltonian_slow(v, J),
                     hamiltonian(v, J),
                     hamiltonian_unvectorized(v, J),
-                    hamiltonian_vectorized(v, J)
+                    hamiltonian_vectorized(v, J),
+                    hamiltonian_sparse(v, J)
                     ]
     for i in range(len(hamiltonians)-1):
         try:
