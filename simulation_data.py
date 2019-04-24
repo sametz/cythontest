@@ -48,6 +48,41 @@ def spin8():
     return v, J
 
 
+def spin11():
+    """Fox() pared down by 1 nuclei, for testing spin-11 system."""
+
+    # memory error crash on 12 nuclei (on my home PC). Hashing out nuclei 10/11 data to reduce it to a
+    # 10- or 11-nuclei test case works.
+    v = np.array([1.63, 1.63, 2.2, 2.2, 2.5, 2.5, 2.5, 2.5, 2.5,
+                  2.5,
+                  5.71 #,
+                  # 5.77
+                  ]) * 400
+    J = np.zeros((len(v), len(v)))
+    J[0, 1] = -12
+    J[0, 2] = 1
+    J[0, 3] = 10
+    J[0, 8] = 1
+    J[0, 9] = 8.5
+    J[1, 2] = 10
+    J[1, 3] = 1
+    J[1, 8] = 8.5
+    J[1, 9] = 1
+    J[2, 3] = -12
+    J[2, 10] = 9
+    J[3, 10] = 8.5
+    J[4, 5] = -12
+    J[4, 6] = 3.5
+    J[4, 7] = 7
+    # J[4, 11] = 8.5
+    J[5, 6] = 7
+    J[5, 7] = 3.5
+    # J[5, 11] = 7.5
+    J[6, 7] = -12
+    J = J + J.T
+    return v, J
+
+
 def fox():
     """Joe Fox had an interesting spectrum for cyclooct-4-enone. Here are estimated parameters for this simulation.
 

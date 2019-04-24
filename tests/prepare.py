@@ -2,7 +2,7 @@
 import numpy as np
 
 from nmrtools.nmrmath import hamiltonian
-from simulation_data import spin8, spin3, fox
+from simulation_data import spin8, spin3, spin11, fox
 
 
 def hamiltonian_original(freqlist, couplings):
@@ -76,4 +76,5 @@ def hamiltonian_original(freqlist, couplings):
 
 standard_3 = hamiltonian_original(*spin3())
 standard_8 = hamiltonian_original(*spin8())
+standard_11 = hamiltonian(*spin11())
 # standard_fox = hamiltonian(*fox())
