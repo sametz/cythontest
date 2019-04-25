@@ -8,7 +8,7 @@ import send2trash
 from simulation_data import spin8, spin11, spin3, fox
 from speedtest.speedutils import timefn  # Decorator for timing functions
 from speedtest.compare_hamiltonians import (kuprov_H, kuprov_cached, hamiltonian_slow, hamiltonian,
-                                            spin_operators_unvectorized,
+                                            spin_operators_unvectorized, spin_operators_vectorized,
                                             hamiltonian_unvectorized, hamiltonian_vectorized,
                                             hamiltonian_sparse)
 from nmrtools.nmrmath import simsignals
@@ -16,7 +16,6 @@ from .prepare import standard_3, standard_8, standard_11  #standard_fox
 
 SPIN_SYSTEM = spin11
 STANDARD_H = standard_11
-
 
 def cleanup():
     path = os.getcwd()
@@ -106,7 +105,7 @@ def test_hamiltonian_unvectorized():
 
 def test_hamiltonian_vectorized():
     v, J = SPIN_SYSTEM()
-    L = spin_operators(len(v))
+    L = spin_operators_vectorized(len(v))
     test_H = hamiltonian_vectorized(v, J, L)
     assert np.array_equal(test_H, STANDARD_H)
 
@@ -165,7 +164,7 @@ def sparse_loop(v, J, n):
 
 
 def test_all():
-    n = 30
+    n = 3
     v, J = SPIN_SYSTEM()
     # kuprov_loop(v, J, n)
     # kuprov_cached_loop(v, J, n)
