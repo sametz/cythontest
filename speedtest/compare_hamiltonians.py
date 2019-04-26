@@ -113,7 +113,7 @@ def spin_operators_vectorized(nspins):
         L[2][n] = Lz_current
     L_T = L.transpose(1, 0, 2, 3)
     Lproduct = np.tensordot(L_T, L, axes=((1, 3), (0, 2))).swapaxes(1, 2)
-    Lz = [csr_matrix(z) for z in L[2]]
+    # Lz = [csr_matrix(z) for z in L[2]]
     # for i in range(nspins):
     #     for j in range(nspins):
     #         Lproduct[i, j] = csr_matrix(Lproduct[i, j])
@@ -146,7 +146,7 @@ def so_sparse(nspins):
         Lproduct = sparse.load_npz(filename_Lproduct)
         return Lz, Lproduct
     except FileNotFoundError:
-        print(f'creating vectorized{nspins}.npy')
+        print(f'creating {filename_Lz} and {filename_Lproduct}')
     sigma_x = np.array([[0, 1 / 2], [1 / 2, 0]])
     sigma_y = np.array([[0, -1j / 2], [1j / 2, 0]])
     sigma_z = np.array([[1 / 2, 0], [0, -1 / 2]])
@@ -184,7 +184,19 @@ def so_sparse(nspins):
     return Lz_sparse, Lproduct_sparse
 
 
+@timefn
 def hamiltonian_sparse(v, J):
+    """
+
+    Parameters
+    ----------
+    v
+    J
+
+    Returns
+    -------
+    H: a numpy.ndarray, and NOT a sparse.COO?!?!?!
+    """
     nspins = len(v)
     Lz, Lproduct = so_sparse(nspins)
     H = sparse.tensordot(v, Lz, axes=1)
@@ -201,12 +213,12 @@ if __name__ == '__main__':
     v, J = spin8()
     # L = spin_operators(8)
     hamiltonians = [
-                    kuprov_H(v, J),
-                    kuprov_cached(v, J),
+                    # kuprov_H(v, J),
+                    # kuprov_cached(v, J),
                     # hamiltonian_slow(v, J),
                     hamiltonian(v, J),
-                    hamiltonian_unvectorized(v, J),
-                    hamiltonian_vectorized(v, J),
+                    # hamiltonian_unvectorized(v, J),
+                    # hamiltonian_vectorized(v, J),
                     hamiltonian_sparse(v, J)
                     ]
     for i in range(len(hamiltonians)-1):

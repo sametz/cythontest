@@ -15,7 +15,7 @@ from nmrtools.nmrmath import simsignals
 from .prepare import standard_3, standard_8, standard_11  #standard_fox
 
 SPIN_SYSTEM = spin11
-STANDARD_H = standard_11
+STANDARD_H = standard_8
 
 def cleanup():
     path = os.getcwd()
@@ -164,7 +164,7 @@ def sparse_loop(v, J, n):
 
 
 def test_all():
-    n = 3
+    n = 1
     v, J = SPIN_SYSTEM()
     # kuprov_loop(v, J, n)
     # kuprov_cached_loop(v, J, n)
