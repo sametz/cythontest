@@ -119,3 +119,19 @@ def fox():
     J[6, 7] = -12
     J = J + J.T
     return v, J
+
+
+def rioux():
+    """http://www.users.csbsju.edu/~frioux/nmr/ABC-NMR-Tensor.pdf
+
+    Returns
+    -------
+
+    """
+    v = np.array([430.0, 265.0, 300.0])
+    J = np.zeros((3, 3))
+    J[0, 1] = 7.0
+    J[0, 2] = 15.0
+    J[1, 2] = 1.50
+    J = J + J.T
+    return v, J

@@ -1,5 +1,7 @@
+"""Testing the performance for the entire spectrum calculation."""
 import numpy as np
-from scipy.sparse import csc_matrix, csr_matrix
+from scipy.sparse import csc_matrix, csr_matrix, lil_matrix
+import sparse
 
 from nmrtools.nmrmath import is_allowed, normalize_spectrum, transition_matrix
 from nmrtools.nmrplot import nmrplot
@@ -64,6 +66,7 @@ def simsignals(H, nspins):
     spectrum : [(float, float)...]
         a list of (frequency, intensity) tuples.
     """
+    """The original simsignals."""
     # This routine was optimized for speed by vectorizing the intensity
     # calculations, replacing a nested-for signal-by-signal calculation.
     # Considering that hamiltonian was dramatically faster when refactored to
@@ -154,9 +157,10 @@ def simsignals2(H, nspins):
 
     return spectrum
 
-
+@timefn
 def transition_matrix2(n):
-    T = np.zeros((n, n))  # sparse matrix created
+    """dense version"""
+    T = np.zeros((n, n))
     for i in range(n - 1):
         for j in range(i + 1, n):
             if is_allowed(i, j):
@@ -165,10 +169,26 @@ def transition_matrix2(n):
     return T
 
 
-def test_transition_matrix2():
-    T_old = transition_matrix(8)
-    T_new = transition_matrix2(8)
-    assert np.array_equal(T_old.todense(), T_new)
+@timefn
+def transition_matrix_sparse(n):
+    """uses sparse package"""
+    T = lil_matrix((n, n))
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            if is_allowed(i, j):
+                T[i, j] = 1
+    T = T + T.T
+    return sparse.COO(T)
+
+
+def test_transition_matrices():
+    nspins = 11
+    n = 2 ** nspins
+    T_old = transition_matrix(n)
+    T_dense = transition_matrix2(n)
+    T_sparse = transition_matrix_sparse(n)
+    assert np.array_equal(T_old.todense(), T_dense)
+    assert np.array_equal(T_old.todense(), T_sparse.todense())
 
 
 @timefn

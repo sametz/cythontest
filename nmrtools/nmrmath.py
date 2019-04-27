@@ -86,6 +86,7 @@ def is_allowed(m=0, n=0):
     return popcount(m ^ n) == 1
 
 
+@timefn
 def transition_matrix(n):
     """
     Creates a matrix of allowed transitions.
@@ -101,9 +102,11 @@ def transition_matrix(n):
 
     Returns
     -------
-    lil_matrix
+    csr_matrix
         a transition matrix that can be used to compute the intensity of
     allowed transitions.
+
+    Note: lil_matrix becomes csr_matrix after adding transpose.
     """
     # function was optimized by only calculating upper triangle and then adding
     # the lower.
@@ -553,7 +556,7 @@ def hamiltonian(freqlist, couplings):
 
     Returns
     -------
-
+    H (np.matrix)
     """
     nspins = len(freqlist)
     # Hamiltonian operator
