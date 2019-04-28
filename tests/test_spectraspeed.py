@@ -15,6 +15,9 @@ H8_SPARSE = hamiltonian_sparse(*spin8())
 print('Import type: ', type(H8_SPARSE))
 
 
+# Below are older functions that were written before completion of
+# test_simsignals.py
+
 def nspinspec(h_func, freqs, couplings, normalize=True):
     """A version of nmrtools.nmrmath.nspinspec that accepts different H functions."""
     """
@@ -47,7 +50,7 @@ def nspinspec(h_func, freqs, couplings, normalize=True):
     return spectrum
 
 
-@timefn
+# @timefn
 def simsignals(H, nspins):
     """
     Calculates the eigensolution of the spin Hamiltonian H and, using it,
@@ -79,6 +82,7 @@ def simsignals(H, nspins):
     # unreal components b/c of rounding errors
     E, V = np.linalg.eigh(H)    # V will be eigenvectors, v will be frequencies
 
+    # 2019-04-27: the statement below may be wrong. May be entirely real already
     # Eigh still leaves residual 0j terms, so:
     V = np.asmatrix(V.real)
 
