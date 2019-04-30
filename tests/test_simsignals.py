@@ -182,6 +182,24 @@ def new_simsignals(H, nspins):
     return spectrum
 
 
+def newer_simsignals(H, nspins):
+    """new_simsignals plus faster transition matrix"
+    """
+    m = 2 ** nspins
+    E, V = np.linalg.eigh(H)
+    # T = new_transition_matrix(m)
+    T = cache_tm(m)
+    I = np.square(V.T.dot(T.dot(V)))
+    spectrum = []
+    for i in range(m - 1):
+        for j in range(i + 1, m):
+            if I[i, j] > 0.01:  # consider making this minimum intensity
+                # cutoff a function arg, for flexibility
+                v = abs(E[i] - E[j])
+                spectrum.append((v, I[i, j]))
+    return spectrum
+
+
 @timefn
 def loop_simsignals(H, nspins, n):
     for i in range(n):
@@ -196,16 +214,97 @@ def loop_new_simsignals(H, nspins, n):
     return _
 
 
+@timefn
+def loop_newer_simsignals(H, nspins, n):
+    for i in range(n):
+        _ = newer_simsignals(H, nspins)
+    return _
+
+
+@timefn
+def new_transition_matrix(n):
+    """Dense/optimized(?) version of transition matrix."""
+    """
+    Creates a matrix of allowed transitions.
+
+    The integers 0-`n`, in their binary form, code for a spin state
+    (alpha/beta). The (i,j) cells in the matrix indicate whether a transition
+    from spin state i to spin state j is allowed or forbidden.
+    See the ``is_allowed`` function for more information.
+
+    Parameters
+    ---------
+    n : dimension of the n,n matrix (i.e. number of possible spin states).
+
+    Returns
+    -------
+    csr_matrix
+        a transition matrix that can be used to compute the intensity of
+    allowed transitions.
+
+    Note: lil_matrix becomes csr_matrix after adding transpose.
+    """
+    # Testing with spin-11 and the new simsignals: new_transition matrix is
+    # faster than transition_matrix (0.8 vs 1.1 s), but simsignals with
+    # matrix is only slightly faster, and simsignals with ndarray (the
+    # future) is slower. Can try compromising by keeping lil_matrix but
+    # condensing popcount/is_allowed, but best may be just to cache these.
+    T = np.zeros((n, n))
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            if bin(i ^ j).count('1') == 1:
+                T[i, j] = 1
+    # T = T + T.T
+    T += T.T
+    return T
+
+
+@timefn
+def cache_tm(n):
+    """spin11 test indicates this leads to faster overall simsignals().
+
+    11 spin x 6: 29.6 vs. 35.1 s
+    8 spin x 60: 2.2 vs 3.0 s"""
+    filename = f'transitions{n}.npz'
+    try:
+        T = sparse.load_npz(filename)
+        return T
+    except FileNotFoundError:
+        print(f'creating {filename}')
+        T = np.zeros((n, n))
+        for i in range(n - 1):
+            for j in range(i + 1, n):
+                if bin(i ^ j).count('1') == 1:
+                    T[i, j] = 1
+        # T = T + T.T
+        T += T.T
+        T_sparse = sparse.COO(T)
+        sparse.save_npz(filename, T_sparse)
+        return T_sparse
+
+
+def test_cache_tm():
+    T1 = transition_matrix(2**3)
+    T2 = cache_tm(2**3)
+    assert np.array_equal(T1.todense(), T2.todense())
+
+
+def test_tm():
+    t_old = transition_matrix(2**11)
+    t_new = cache_tm(2**11)
+    assert np.array_equal(t_old.todense(), t_new.todense())
+
+
 def test_simsignals():
     # Tests indicate new_simsignals is faster, with the difference increasing
     # at higher spin numbers.
     # matrix, spin 11, x3: old 64.5 s, new 12.1 s
     # array, spin11, x3: old 62.3 s, new 16.7 s
-    n = 3
-    H = H11_NDARRAY
-    nspins = 11
-    s1 = loop_simsignals(H, nspins, n)
-    s2 = loop_new_simsignals(H, nspins, n)
+    n = 60
+    H = H8_NDARRAY
+    nspins = 8
+    s1 = loop_new_simsignals(H, nspins, n)
+    s2 = loop_newer_simsignals(H, nspins, n)
     assert np.allclose(s1, s2)
 
 
@@ -258,4 +357,5 @@ def test_matrix_multiplication():
     assert np.allclose(Istar.todense(), Idot.todense())
 
 
-
+if __name__ == '__main__':
+    new_simsignals(H11_NDARRAY, 11)
