@@ -13,13 +13,15 @@ Notes:
     np.linalg.eigh returns v as ndarray if input is ndarray, matrix if matrix;
     np.scipy.eigh returns v as ndarray
 """
+import line_profiler
+profile = line_profiler.LineProfiler()
 import numpy as np
 import scipy
 from scipy.sparse import csc_matrix, csr_matrix, lil_matrix
 import sparse
 
-from nmrtools.nmrmath import is_allowed, normalize_spectrum, transition_matrix
-from nmrtools.nmrplot import nmrplot
+# from nmrtools.nmrmath import is_allowed, normalize_spectrum, transition_matrix
+# from nmrtools.nmrplot import nmrplot
 from speedtest.compare_hamiltonians import hamiltonian, hamiltonian_sparse
 from speedtest.speedutils import timefn
 from tests.test_spectraspeed import simsignals
@@ -182,6 +184,7 @@ def new_simsignals(H, nspins):
     return spectrum
 
 
+@profile
 def newer_simsignals(H, nspins):
     """new_simsignals plus faster transition matrix"
     """
@@ -198,7 +201,6 @@ def newer_simsignals(H, nspins):
                 v = abs(E[i] - E[j])
                 spectrum.append((v, I[i, j]))
     return spectrum
-
 
 @timefn
 def loop_simsignals(H, nspins, n):
@@ -259,7 +261,7 @@ def new_transition_matrix(n):
     return T
 
 
-@timefn
+# @timefn
 def cache_tm(n):
     """spin11 test indicates this leads to faster overall simsignals().
 
@@ -308,6 +310,12 @@ def test_simsignals():
     assert np.allclose(s1, s2)
 
 
+def test_loop_newer_simsignals():
+    n = 1
+    _ = loop_newer_simsignals(H11_NDARRAY, 11, n)
+    assert _ is not None
+
+
 @timefn
 def istar(a, b, c, n):
     for i in range(n):
@@ -336,7 +344,7 @@ def test_dot_speed():
     Vcol = csc_matrix(V)
     Vrow = csr_matrix(Vcol.T)
     T = transition_matrix(2**8)
-    intensity_matrices = [f(Vrow, T, Vcol, 10000).todense()
+    intensity_matrices = [f(Vrow, T, Vcol, 1).todense()
                           for f in [istar, iat, idot]]
     for i in range(2):
         assert np.allclose(intensity_matrices[i], intensity_matrices[i+1])
@@ -358,4 +366,4 @@ def test_matrix_multiplication():
 
 
 if __name__ == '__main__':
-    new_simsignals(H11_NDARRAY, 11)
+    newer_simsignals(H11_NDARRAY, 11)

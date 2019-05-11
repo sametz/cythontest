@@ -184,7 +184,7 @@ def so_sparse(nspins):
     return Lz_sparse, Lproduct_sparse
 
 
-@timefn
+# @timefn
 def hamiltonian_sparse(v, J):
     """
 

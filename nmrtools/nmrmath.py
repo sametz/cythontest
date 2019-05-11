@@ -86,7 +86,7 @@ def is_allowed(m=0, n=0):
     return popcount(m ^ n) == 1
 
 
-@timefn
+# @timefn
 def transition_matrix(n):
     """
     Creates a matrix of allowed transitions.

@@ -9,3 +9,25 @@ TODO: compare Kuprov to my old code
 TODO: compare Kuprov to my vectorized code
 TODO: compare Kuprov to my "pre-saved partial solution" code
 TODO: dial in on a fastest solution based on these speed test results
+
+2019-05-11 Summary of latest work:
+The dense Kuprov was faster than the original Hamiltonian (hamiltonian_old).
+
+Initially, the Hamiltonian using np.matrix and spin operator caching
+outperformed everything else. However, np.matrix is deprecated, and the solution
+ is not as simple as swapping in np.array because we took advantage of the
+ "atomic" nature of the np.matrix (preserving boundaries between 2D matrix
+ objects within a greater 2D matrix, rather than blend into a 4D array).
+
+ Currently, simulations hang at 12 spin operators; 11 is the largest it
+  can handle.
+
+  Initially my vectorized solutions were slower than the np.matrix Hamiltonian,
+  but operators weren't saved sparse. Started using the sparse library and
+  created hamiltonian_sparse. Obtained significant speed gains over original
+  hamiltonian, and smaller files for saved spin operators. Still not possible to
+   expand to 12 spins. A brief look at numba wasn't fruitful.
+
+ Created faster, sparse, cached transition matrix (cache_tm). Brought external
+ functions
+ (popcount/is_allowed) into the transition matrix function itself.
