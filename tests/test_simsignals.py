@@ -20,8 +20,8 @@ import scipy
 from scipy.sparse import csc_matrix, csr_matrix, lil_matrix
 import sparse
 
-# from nmrtools.nmrmath import is_allowed, normalize_spectrum, transition_matrix
-# from nmrtools.nmrplot import nmrplot
+from nmrtools.nmrmath import is_allowed, normalize_spectrum, transition_matrix
+from nmrtools.nmrplot import nmrplot
 from speedtest.compare_hamiltonians import hamiltonian, hamiltonian_sparse
 from speedtest.speedutils import timefn
 from tests.test_spectraspeed import simsignals
@@ -35,6 +35,7 @@ H8_NDARRAY = hamiltonian_sparse(*spin8())
 H11_MATRIX = hamiltonian(*spin11())
 H11_NDARRAY = hamiltonian_sparse(*spin11())
 H_RIOUX = hamiltonian(*rioux())
+H_RIOUX_SPARSE = hamiltonian_sparse(*rioux())
 
 
 @timefn
@@ -64,11 +65,12 @@ def test_matrix_eigh_time():
 def test_array_eigh_time():
     # conclusion: ndarray faster in np eigh than scipy eigh
     # (9.8 vs 13.3 s, 10.3 vs 13.5, 10.6 vs. 13.9) 8-spin
-    # consistemt with 11-spin e.g. 14.4 vs. 17.0 s, x5
+    # consistent with 11-spin e.g. 14.4 vs. 17.0 s, x5
     # conclusion: matrix faster than ndarray, and np faster than scipy for eigh
     multitest(np.linalg.eigh, H11_NDARRAY, 5)
     multitest(scipy.linalg.eigh, H11_NDARRAY, 5)
     assert 1 == 1
+
 
 def loop_numpy_scipy_eigensolutions(h, n):
     for i in range(n):
@@ -105,8 +107,8 @@ def test_ev_matching():
     assert np.allclose(E1, E2)
     # accessing eigenvectors is different depending on whether V is a matrix
     # or an ndarray
-    assert not np.allclose(V1[:,1], V2[:, 1])
-    assert np.allclose(V1_asarray[:,1], V2[:,1])
+    assert not np.allclose(V1[:, 1], V2[:, 1])
+    assert np.allclose(V1_asarray[:, 1], V2[:, 1])
     # The different eigenvector solutions have terms differing in sign, which
     # apparently is OK. So, testing functional equality by using squares::
     V1_ = np.square(V1)
@@ -201,6 +203,85 @@ def newer_simsignals(H, nspins):
                 v = abs(E[i] - E[j])
                 spectrum.append((v, I[i, j]))
     return spectrum
+
+
+# Splitting simsignals up to test vectorization of for loop
+def intensity_and_energy(H, nspins):
+    """Calculate intensity matrix and energies (eigenvalues) from Hamiltonian.
+
+    Parameters
+    ----------
+    H (numpy.ndarray): Spin Hamiltonian
+    nspins: number of spins in spin system
+
+    Returns
+    -------
+    (I, E) (numpy.ndarray, numpy.ndarray) tuple of:
+        I: (relative) intensity matrix
+        V: 1-D array of relative energies.
+    """
+    m = 2 ** nspins
+    E, V = np.linalg.eigh(H)
+    V = V.real
+    T = cache_tm(m)
+    I = np.square(V.T.dot(T.dot(V)))
+    return I, E
+
+
+def old_compile_spectrum(I, E):
+    spectrum = []
+    m = I.shape[0]
+    for i in range(m - 1):
+        for j in range(i + 1, m):
+            if I[i, j] > 0.01:  # consider making this minimum intensity
+                # cutoff a function arg, for flexibility
+                v = abs(E[i] - E[j])
+                spectrum.append((v, I[i, j]))
+    return spectrum
+
+
+def new_compile_spectrum(I, E):
+    pass
+
+
+def difference_matrix(array):
+    """From a 1D array, compute a 2D array of differences between all
+    elements.
+    Ref: https://stackoverflow.com/questions/9704565/populate-numpy-matrix-from-the-difference-of-two-vectors
+    """
+    return np.abs(array[:, np.newaxis] - array)
+
+def test_difference_matrix():
+    array = np.array([1, 5])
+    assert np.array_equal(
+        np.array([[0, 4], [4, 0]]),
+        difference_matrix(array)
+    )
+
+def stack_matrix(m1, m2):
+    return np.dstack((m1, m2))
+
+
+def test_stack_matrix():
+    m1 = [[100, 200], [300, 400]]
+    m2 = [[1, 2], [3, 4]]
+    expected = np.array([
+        [[100, 200], [300, 400]],
+        [[1, 2], [3, 4]]
+    ])
+    obtained = stack_matrix(m1, m2)
+    print(obtained)
+    assert np.array_equal(expected, obtained)
+
+
+def test_split_simsignals():
+    H = H_RIOUX
+    refspec = newer_simsignals(H, 3)
+    I, E = intensity_and_energy(H, 3)
+    print(I)
+    testspec = old_compile_spectrum(I, E)
+    assert np.array_equal(refspec, testspec)
+
 
 @timefn
 def loop_simsignals(H, nspins, n):
