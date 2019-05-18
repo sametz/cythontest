@@ -9,7 +9,7 @@ from nmrtools.nmrmath import simsignals as current_simsignals
 
 from speedtest.compare_hamiltonians import hamiltonian_sparse as \
     candidate_hamiltonian
-from tests.test_simsignals import newer_simsignals as candidate_simsignals
+from tests.test_simsignals import vectorized_simsignals as candidate_simsignals
 
 
 if __name__ == '__main__':

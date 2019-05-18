@@ -241,7 +241,43 @@ def old_compile_spectrum(I, E):
 
 
 def new_compile_spectrum(I, E):
-    pass
+    I_upper = np.triu(I)
+    E_matrix = np.abs(E[:, np.newaxis] - E)
+    E_upper = np.triu(E_matrix)
+    combo = np.stack([E_upper, I_upper])
+    iv = combo.reshape(2, I.shape[0] ** 2).T
+
+    return iv[iv[:, 1] >= 0.01]
+
+
+def tupleize(array):
+    newtuple = []
+    for row in array:
+        newtuple.append(tuple(row))
+    return newtuple
+
+
+def test_new_compile_spectrum():
+    H = H_RIOUX
+    old_spectrum = simsignals(H, 3)
+    I, E = intensity_and_energy(H, 3)
+    new_spec_array = new_compile_spectrum(I, E)
+    new_spectrum = new_spec_array #tupleize(new_spec_array)
+    print(old_spectrum[:10])
+    print(new_spectrum[:10])
+    assert np.allclose(old_spectrum, new_spectrum)
+
+
+def vectorized_simsignals(H, nspins):
+    I, E = intensity_and_energy(H, nspins)
+    return new_compile_spectrum(I, E)
+
+
+def test_vectorized_simsignals():
+    H = H_RIOUX_SPARSE
+    old_spectrum = simsignals(H, 3)
+    new_spectrum = vectorized_simsignals(H, 3)
+    assert np.allclose(old_spectrum, new_spectrum)
 
 
 def difference_matrix(array):
