@@ -294,20 +294,20 @@ def test_difference_matrix():
         difference_matrix(array)
     )
 
-def stack_matrix(m1, m2):
-    return np.dstack((m1, m2))
-
-
-def test_stack_matrix():
-    m1 = [[100, 200], [300, 400]]
-    m2 = [[1, 2], [3, 4]]
-    expected = np.array([
-        [[100, 200], [300, 400]],
-        [[1, 2], [3, 4]]
-    ])
-    obtained = stack_matrix(m1, m2)
-    print(obtained)
-    assert np.array_equal(expected, obtained)
+# def stack_matrix(m1, m2):
+#     return np.dstack((m1, m2))
+#
+#
+# def test_stack_matrix():
+#     m1 = [[100, 200], [300, 400]]
+#     m2 = [[1, 2], [3, 4]]
+#     expected = np.array([
+#         [[100, 200], [300, 400]],
+#         [[1, 2], [3, 4]]
+#     ])
+#     obtained = stack_matrix(m1, m2)
+#     print(obtained)
+#     assert np.array_equal(expected, obtained)
 
 
 def test_split_simsignals():

@@ -31,3 +31,7 @@ outperformed everything else. However, np.matrix is deprecated, and the solution
  Created faster, sparse, cached transition matrix (cache_tm). Brought external
  functions
  (popcount/is_allowed) into the transition matrix function itself.
+
+ Memory testing indicated 11 spin calc takes up ca half a GB of RAM. It seems
+ that numpy can handle larger matrices out of RAM--probably slower, but a
+ possible option for future consideration.

@@ -14,8 +14,8 @@ from speedtest.compare_hamiltonians import (kuprov_H, kuprov_cached, hamiltonian
 from nmrtools.nmrmath import simsignals
 from .prepare import standard_3, standard_8, standard_11  #standard_fox
 
-SPIN_SYSTEM = spin11
-STANDARD_H = standard_8
+SPIN_SYSTEM = spin3
+STANDARD_H = standard_3
 
 def cleanup():
     path = os.getcwd()
@@ -98,15 +98,15 @@ def test_hamiltonian():
 
 def test_hamiltonian_unvectorized():
     v, J = SPIN_SYSTEM()
-    L = spin_operators_unvectorized(len(v))
-    test_H = hamiltonian_unvectorized(v, J, L)
+    # L = spin_operators_unvectorized(len(v))
+    test_H = hamiltonian_unvectorized(v, J)
     assert np.array_equal(test_H, STANDARD_H)
 
 
 def test_hamiltonian_vectorized():
     v, J = SPIN_SYSTEM()
-    L = spin_operators_vectorized(len(v))
-    test_H = hamiltonian_vectorized(v, J, L)
+    # L = spin_operators_vectorized(len(v))
+    test_H = hamiltonian_vectorized(v, J)
     assert np.array_equal(test_H, STANDARD_H)
 
 
