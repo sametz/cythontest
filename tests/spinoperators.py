@@ -1,13 +1,16 @@
-"""Looked at making spin operator calculation faster, or allowing it to make solutions for 12+ spins, by using the
-sparse package and/or numba. Lack of some numpy functionality in sparse (e.g. assign in place; swapaxes)
-and numba limitations for types makes this look like a non-productive place to seek speed gains,
-esp. if the spin operators will indeed be distributed as binaries along with the nmrtools package.
+"""Looked at making spin operator calculation faster, or allowing it to make
+solutions for 12+ spins, by using the sparse package and/or numba. Lack of
+some numpy functionality in sparse (e.g. assign in place; swapaxes) and numba
+limitations for types makes this look like a non-productive place to seek
+speed gains, esp. if the spin operators will indeed be distributed as
+binaries along with the nmrtools package.
 """
 from numba import njit, jit
 import numpy as np
 import sparse
 
 from speedtest.speedutils import timefn
+
 
 def spin_operators(nspins):
     sigma_x = np.array([[0, 1 / 2], [1 / 2, 0]])

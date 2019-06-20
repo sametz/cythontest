@@ -1,19 +1,49 @@
-"""qm is an attempt to reorganize the API indirectly. Instead of moving all
-the quantum mechanical calculations to this file, we try to import them instead.
+"""qm contains functions for the quantum-mechanical (second-order)
+calculation of NMR spectra.
 
-If this works, we can leave functions in their original locations for now and
-essentially mock the new API.
+Because numpy.matrix is marked as deprecated, in Winter/Spring 2019 the qm
+code was refactored to a) accommodate this deprecation and b) speed up the
+calculations. The fastest calculations rely on:
+
+1. the pydata/sparse library. SciPy's sparse depends on numpy.matrix,
+and they currently recommend that pydata/sparse be used for now.
+
+2. Caching partial solutions for spin operators and transition matrices as
+.npz files.
+
+If the pydata/sparse package is no longer available, and/or if distributing
+the library with .npz files via PyPI is problematic, then a backup is
+required. The qm module for now provides two sets of functions for
+calculating second-order spectra: one using pydata/sparse and caching,
+and the other using neither.
 """
 import os
 
 import numpy as np
+from scipy.sparse import csc_matrix, csr_matrix
 import sparse
-from .nmrmath import simsignals, nspinspec, normalize_spectrum
+from .nmrmath import normalize_spectrum, transition_matrix
 
 SO_DIR = os.path.join(os.path.abspath('..'), 'nmrtools', 'bin')
 
 
 def so_dense(nspins):
+    """
+    Calculate spin operators required for constructing the spin hamiltonian.
+
+    Parameters
+    ----------
+    nspins: int
+        the number of spins in the spin system
+
+    Returns
+    -------
+    (Lz, Lproduct): a tuple of:
+        Lz: 3d array of shape (n, 2^n, 2^n) representing [Lz1, Lz2, ...Lzn]
+        Lproduct: 4d array of shape (n, n, 2^n, 2^n), representing an n x n
+        array (cartesian product) for all combinations of
+        Lxa*Lxb + Lya*Lyb + Lza*Lzb, where 1 <= a, b <= n.
+    """
     sigma_x = np.array([[0, 1 / 2], [1 / 2, 0]])
     sigma_y = np.array([[0, -1j / 2], [1j / 2, 0]])
     sigma_z = np.array([[1 / 2, 0], [0, -1 / 2]])
@@ -48,17 +78,40 @@ def so_dense(nspins):
 
 
 def so_sparse(nspins):
+    """Either load a presaved set of spin operators as numpy arrays, or
+    calculate them and save them if a presaved set wasn't found.
+
+    Parameters
+    ----------
+    nspins: int
+        the number of spins in the spin system
+
+    Returns
+    -------
+    (Lz, Lproduct): a tuple of:
+        Lz: 3d sparse.COO array of shape (n, 2^n, 2^n) representing
+        [Lz1, Lz2, ...Lzn]
+        Lproduct: 4d sparse.COO array of shape (n, n, 2^n, 2^n), representing
+        an n x n array (cartesian product) for all combinations of
+        Lxa*Lxb + Lya*Lyb + Lza*Lzb, where 1 <= a, b <= n.
+
+    Side Effect
+    -----------
+    Saves the results as .npz files to the bin directory if they were not
+    found there.
+    """
     filename_Lz = f'Lz{nspins}.npz'
     filename_Lproduct = f'Lproduct{nspins}.npz'
-    path_Lz = os.path.join(SO_DIR, filename_Lz)
-    path_Lproduct = os.path.join(SO_DIR, filename_Lproduct)
+    bin_dir = os.path.join(os.path.dirname(__file__), 'bin')
+    path_Lz = os.path.join(bin_dir, filename_Lz)
+    path_Lproduct = os.path.join(bin_dir, filename_Lproduct)
 
     try:
         Lz = sparse.load_npz(path_Lz)
         Lproduct = sparse.load_npz(path_Lproduct)
         return Lz, Lproduct
     except FileNotFoundError:
-        print('no SO file ', filename_Lz, ' found in: ', SO_DIR)
+        print('no SO file ', filename_Lz, ' found in: ', bin_dir)
         print(f'creating {filename_Lz} and {filename_Lproduct}')
     sigma_x = np.array([[0, 1 / 2], [1 / 2, 0]])
     sigma_y = np.array([[0, -1j / 2], [1j / 2, 0]])
@@ -87,9 +140,6 @@ def so_sparse(nspins):
     L_T = L.transpose(1, 0, 2, 3)
     Lproduct = np.tensordot(L_T, L, axes=((1, 3), (0, 2))).swapaxes(1, 2)
     Lz_sparse = sparse.COO(L[2])
-    # for i in range(nspins):
-    #     for j in range(nspins):
-    #         Lproduct[i, j] = csr_matrix(Lproduct[i, j])
     Lproduct_sparse = sparse.COO(Lproduct)
     sparse.save_npz(path_Lz, Lz_sparse)
     sparse.save_npz(path_Lproduct, Lproduct_sparse)
@@ -126,22 +176,112 @@ def hamiltonian_sparse(v, J):
     return H
 
 
-def nspinspec_dense(*args, **kwargs):
-    return nspinspec(*args, **kwargs)
+def simsignals(H, nspins):
+    """
+    Calculates the eigensolution of the spin Hamiltonian H and, using it,
+    returns the allowed transitions as list of (frequency, intensity) tuples.
+
+    Parameters
+    ---------
+
+    H : ndarray
+        the spin Hamiltonian.
+    nspins : int
+        the number of nuclei in the spin system.
+
+    Returns
+    -------
+    spectrum : [(float, float)...]
+        a list of (frequency, intensity) tuples.
+    """
+    # This routine was optimized for speed by vectorizing the intensity
+    # calculations, replacing a nested-for signal-by-signal calculation.
+    # Considering that hamiltonian was dramatically faster when refactored to
+    # use arrays instead of sparse matrices, consider an array refactor to this
+    # function as well.
+
+    # The eigensolution calculation apparently must be done on a dense matrix,
+    # because eig functions on sparse matrices can't return all answers?!
+    # Using eigh so that answers have only real components and no residual small
+    # unreal components b/c of rounding errors
+    E, V = np.linalg.eigh(H)    # V will be eigenvectors, v will be frequencies
+
+    # Eigh still leaves residual 0j terms, so:
+    V = np.asmatrix(V.real)
+
+    # Calculate signal intensities
+    Vcol = csc_matrix(V)
+    Vrow = csr_matrix(Vcol.T)
+    m = 2 ** nspins
+    T = transition_matrix(m)
+    I = Vrow * T * Vcol
+    I = np.square(I.todense())
+
+    spectrum = []
+    for i in range(m - 1):
+        for j in range(i + 1, m):
+            if I[i, j] > 0.01:  # consider making this minimum intensity
+                                # cutoff a function arg, for flexibility
+                v = abs(E[i] - E[j])
+                spectrum.append((v, I[i, j]))
+
+    return spectrum
 
 
-def cache_tm(n):
+def nspinspec_dense(freqs, couplings, normalize=True):
+    """
+    Calculates second-order spectral data (freqency and intensity of signals)
+    for *n* spin-half nuclei.
+
+    Parameters
+    ---------
+    freqs : [float...]
+        a list of *n* nuclei frequencies in Hz
+    couplings : array-like
+        an *n, n* array of couplings in Hz. The order
+        of nuclei in the list corresponds to the column and row order in the
+        matrix, e.g. couplings[0][1] and [1]0] are the J coupling between
+        the nuclei of freqs[0] and freqs[1].
+    normalize: bool
+        True if the intensities should be normalized so that total intensity
+        equals the total number of nuclei.
+
+    Returns
+    -------
+    spectrum : [(float, float)...]
+        a list of (frequency, intensity) tuples.
+    """
+    nspins = len(freqs)
+    H = hamiltonian_dense(freqs, couplings)
+    spectrum = simsignals(H, nspins)
+    if normalize:
+        spectrum = normalize_spectrum(spectrum, nspins)
+    return spectrum
+
+
+def cache_tm(nspins):
+    """
+
+    Parameters
+    ----------
+    nspins
+
+    Returns
+    -------
+
+    """
     """spin11 test indicates this leads to faster overall simsignals().
 
     11 spin x 6: 29.6 vs. 35.1 s
     8 spin x 60: 2.2 vs 3.0 s"""
-    filename = f'T{n}.npz'
+    filename = f'T{nspins}.npz'
     path = os.path.join(SO_DIR, filename)
     try:
         T = sparse.load_npz(path)
         return T
     except FileNotFoundError:
         print(f'creating {filename}')
+        n = 2 ** nspins
         T = np.zeros((n, n))
         for i in range(n - 1):
             for j in range(i + 1, n):
@@ -159,19 +299,20 @@ def intensity_and_energy(H, nspins):
 
     Parameters
     ----------
-    H (numpy.ndarray): Spin Hamiltonian
-    nspins: number of spins in spin system
+    H:  numpy.ndarray
+        Spin Hamiltonian
+    nspins: int
+        number of spins in spin system
 
     Returns
     -------
-    (I, E) (numpy.ndarray, numpy.ndarray) tuple of:
+    (I, E): (numpy.ndarray, numpy.ndarray) tuple of:
         I: (relative) intensity matrix
         V: 1-D array of relative energies.
     """
-    m = 2 ** nspins
     E, V = np.linalg.eigh(H)
     V = V.real
-    T = cache_tm(m)
+    T = cache_tm(nspins)
     I = np.square(V.T.dot(T.dot(V)))
     return I, E
 
