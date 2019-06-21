@@ -113,33 +113,8 @@ def so_sparse(nspins):
     except FileNotFoundError:
         print('no SO file ', filename_Lz, ' found in: ', bin_dir)
         print(f'creating {filename_Lz} and {filename_Lproduct}')
-    sigma_x = np.array([[0, 1 / 2], [1 / 2, 0]])
-    sigma_y = np.array([[0, -1j / 2], [1j / 2, 0]])
-    sigma_z = np.array([[1 / 2, 0], [0, -1 / 2]])
-    unit = np.array([[1, 0], [0, 1]])
-
-    L = np.empty((3, nspins, 2 ** nspins, 2 ** nspins), dtype=np.complex128)  # consider other dtype?
-    for n in range(nspins):
-        Lx_current = 1
-        Ly_current = 1
-        Lz_current = 1
-
-        for k in range(nspins):
-            if k == n:
-                Lx_current = np.kron(Lx_current, sigma_x)
-                Ly_current = np.kron(Ly_current, sigma_y)
-                Lz_current = np.kron(Lz_current, sigma_z)
-            else:
-                Lx_current = np.kron(Lx_current, unit)
-                Ly_current = np.kron(Ly_current, unit)
-                Lz_current = np.kron(Lz_current, unit)
-
-        L[0][n] = Lx_current
-        L[1][n] = Ly_current
-        L[2][n] = Lz_current
-    L_T = L.transpose(1, 0, 2, 3)
-    Lproduct = np.tensordot(L_T, L, axes=((1, 3), (0, 2))).swapaxes(1, 2)
-    Lz_sparse = sparse.COO(L[2])
+    Lz, Lproduct = so_dense(nspins)
+    Lz_sparse = sparse.COO(Lz)
     Lproduct_sparse = sparse.COO(Lproduct)
     sparse.save_npz(path_Lz, Lz_sparse)
     sparse.save_npz(path_Lproduct, Lproduct_sparse)
@@ -161,19 +136,38 @@ def hamiltonian_sparse(v, J):
 
         Parameters
         ----------
-        v
-        J
+        v: array-like
+            list of frequencies in Hz
+        J: 2D array-like
+            matrix of coupling constants
 
         Returns
         -------
-        H: a numpy.ndarray, and NOT a sparse.COO?!?!?!
+        H: sparse.COO
+            a sparse spin Hamiltonian
         """
     nspins = len(v)
     Lz, Lproduct = so_sparse(nspins)
-    H = sparse.tensordot(v, Lz, axes=1)
-    scalars = 0.5 * J
+    # On large spin systems, converting v and J to sparse improved speed, so:
+    H = sparse.tensordot(sparse.COO(v), Lz, axes=1)
+    scalars = 0.5 * sparse.COO(J)
     H += sparse.tensordot(scalars, Lproduct, axes=2)
     return H
+
+
+def hs2(v, J):
+    v = sparse.COO(v)
+    J = sparse.COO(J)
+    return hamiltonian_sparse(v, J)
+
+
+def nss2(freqs, couplings, normalize=True):
+    nspins = len(freqs)
+    H = hs2(freqs, couplings)
+    spectrum = vectorized_simsignals(H.todense(), nspins)
+    if normalize:
+        spectrum = normalize_spectrum(spectrum, nspins)
+    return spectrum
 
 
 def simsignals(H, nspins):
@@ -275,7 +269,8 @@ def cache_tm(nspins):
     11 spin x 6: 29.6 vs. 35.1 s
     8 spin x 60: 2.2 vs 3.0 s"""
     filename = f'T{nspins}.npz'
-    path = os.path.join(SO_DIR, filename)
+    bin_dir = os.path.join(os.path.dirname(__file__), 'bin')
+    path = os.path.join(bin_dir, filename)
     try:
         T = sparse.load_npz(path)
         return T
@@ -357,7 +352,7 @@ def nspinspec_sparse(freqs, couplings, normalize=True):
     """
     nspins = len(freqs)
     H = hamiltonian_sparse(freqs, couplings)
-    spectrum = vectorized_simsignals(H, nspins)
+    spectrum = vectorized_simsignals(H.todense(), nspins)
     if normalize:
         spectrum = normalize_spectrum(spectrum, nspins)
     return spectrum
