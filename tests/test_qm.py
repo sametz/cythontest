@@ -3,7 +3,8 @@ import numpy as np
 from nmrtools.nmrmath import hamiltonian, nspinspec
 from nmrtools.qm import (hamiltonian_dense, hamiltonian_sparse,
                          nspinspec_dense, nspinspec_sparse,
-                         hs2, nss2)
+                         # hs2, nss2
+                         )
 from simulation_data import rioux
 
 H_RIOUX = hamiltonian(*rioux())
@@ -43,15 +44,3 @@ def test_nspinspec_sparse():
     spectrum = nspinspec_sparse(v, J)
     # THEN the resulting spectrum matches that using the old algorithm
     assert np.allclose(spectrum, SPECTRUM_RIOUX)
-
-
-def test_hs2():
-    v, J = rioux()
-    HS2 = hs2(v, J)
-    assert np.array_equal(HS2.todense(), H_RIOUX)
-
-
-def test_nss2():
-    v, J = rioux()
-    spectrum_nss2 = nss2(v, J)
-    assert np.allclose(spectrum_nss2, SPECTRUM_RIOUX)

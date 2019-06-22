@@ -20,11 +20,11 @@ and the other using neither.
 import os
 
 import numpy as np
-from scipy.sparse import csc_matrix, csr_matrix
+from scipy.sparse import csc_matrix, csr_matrix, lil_matrix
 import sparse
 from .nmrmath import normalize_spectrum, transition_matrix
 
-SO_DIR = os.path.join(os.path.abspath('..'), 'nmrtools', 'bin')
+# SO_DIR = os.path.join(os.path.abspath('..'), 'nmrtools', 'bin')
 
 
 def so_dense(nspins):
@@ -155,71 +155,45 @@ def hamiltonian_sparse(v, J):
     return H
 
 
-def hs2(v, J):
-    v = sparse.COO(v)
-    J = sparse.COO(J)
-    return hamiltonian_sparse(v, J)
-
-
 def nss2(freqs, couplings, normalize=True):
     nspins = len(freqs)
-    H = hs2(freqs, couplings)
+    H = hamiltonian_sparse(freqs, couplings)
     spectrum = vectorized_simsignals(H.todense(), nspins)
     if normalize:
         spectrum = normalize_spectrum(spectrum, nspins)
     return spectrum
 
 
-def simsignals(H, nspins):
+def transition_matrix_dense(nspins):
     """
-    Calculates the eigensolution of the spin Hamiltonian H and, using it,
-    returns the allowed transitions as list of (frequency, intensity) tuples.
+    Creates a matrix of allowed transitions.
+
+    The integers 0-`n`, in their binary form, code for a spin state
+    (alpha/beta). The (i,j) cells in the matrix indicate whether a transition
+    from spin state i to spin state j is allowed or forbidden.
+    See the ``is_allowed`` function for more information.
 
     Parameters
     ---------
-
-    H : ndarray
-        the spin Hamiltonian.
-    nspins : int
-        the number of nuclei in the spin system.
+    nspins : number of spins in the system.
 
     Returns
     -------
-    spectrum : [(float, float)...]
-        a list of (frequency, intensity) tuples.
+    numpy.ndarray
+        a transition matrix that can be used to compute the intensity of
+    allowed transitions.
+
     """
-    # This routine was optimized for speed by vectorizing the intensity
-    # calculations, replacing a nested-for signal-by-signal calculation.
-    # Considering that hamiltonian was dramatically faster when refactored to
-    # use arrays instead of sparse matrices, consider an array refactor to this
-    # function as well.
-
-    # The eigensolution calculation apparently must be done on a dense matrix,
-    # because eig functions on sparse matrices can't return all answers?!
-    # Using eigh so that answers have only real components and no residual small
-    # unreal components b/c of rounding errors
-    E, V = np.linalg.eigh(H)    # V will be eigenvectors, v will be frequencies
-
-    # Eigh still leaves residual 0j terms, so:
-    V = np.asmatrix(V.real)
-
-    # Calculate signal intensities
-    Vcol = csc_matrix(V)
-    Vrow = csr_matrix(Vcol.T)
-    m = 2 ** nspins
-    T = transition_matrix(m)
-    I = Vrow * T * Vcol
-    I = np.square(I.todense())
-
-    spectrum = []
-    for i in range(m - 1):
-        for j in range(i + 1, m):
-            if I[i, j] > 0.01:  # consider making this minimum intensity
-                                # cutoff a function arg, for flexibility
-                v = abs(E[i] - E[j])
-                spectrum.append((v, I[i, j]))
-
-    return spectrum
+    # function was optimized by only calculating upper triangle and then adding
+    # the lower.
+    n = 2 ** nspins
+    T = np.zeros((n, n))  # sparse matrix created
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            if bin(i ^ j).count('1') == 1:
+                T[i, j] = 1
+    T += T.T
+    return T
 
 
 def nspinspec_dense(freqs, couplings, normalize=True):
@@ -247,7 +221,11 @@ def nspinspec_dense(freqs, couplings, normalize=True):
     """
     nspins = len(freqs)
     H = hamiltonian_dense(freqs, couplings)
-    spectrum = simsignals(H, nspins)
+    E, V = np.linalg.eigh(H)
+    V = V.real
+    T = transition_matrix_dense(nspins)
+    I = np.square(V.T.dot(T.dot(V)))
+    spectrum = new_compile_spectrum(I, E)
     if normalize:
         spectrum = normalize_spectrum(spectrum, nspins)
     return spectrum
@@ -276,14 +254,7 @@ def cache_tm(nspins):
         return T
     except FileNotFoundError:
         print(f'creating {filename}')
-        n = 2 ** nspins
-        T = np.zeros((n, n))
-        for i in range(n - 1):
-            for j in range(i + 1, n):
-                if bin(i ^ j).count('1') == 1:
-                    T[i, j] = 1
-        # T = T + T.T
-        T += T.T
+        T = transition_matrix_dense(nspins)
         T_sparse = sparse.COO(T)
         sparse.save_npz(path, T_sparse)
         return T_sparse
